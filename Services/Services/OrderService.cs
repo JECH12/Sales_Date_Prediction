@@ -8,10 +8,10 @@ namespace Services.Services
     public class OrderService : IOrderService
     {
         private readonly IStoredProcedureExecutor _executor;
-        private readonly ILogger<NextPreditedOrder> _logger;
+        private readonly ILogger<OrderService> _logger;
 
         public OrderService(IStoredProcedureExecutor executor,
-                             ILogger<NextPreditedOrder> logger)
+                             ILogger<OrderService> logger)
         {
             _executor = executor;
             _logger = logger;

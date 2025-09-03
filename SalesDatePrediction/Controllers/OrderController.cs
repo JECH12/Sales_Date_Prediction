@@ -9,9 +9,9 @@ namespace SalesDatePrediction.Controllers
     public class OrderController : ControllerBase
     {
         private readonly IOrderService _clientService;
-        private readonly ILogger _logger;
+        private readonly ILogger<OrderController> _logger;
 
-        public OrderController(IOrderService clientService, ILogger logger)
+        public OrderController(IOrderService clientService, ILogger<OrderController> logger)
         {
             _clientService = clientService;
             _logger = logger;          

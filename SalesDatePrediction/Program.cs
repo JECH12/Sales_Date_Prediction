@@ -12,6 +12,17 @@ namespace SalesDatePrediction
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAngular",
+                    policy =>
+                    {
+                        policy.WithOrigins("http://localhost:4200") 
+                              .AllowAnyHeader()
+                              .AllowAnyMethod();
+                    });
+            });
+
             builder.Services.AddDbContext<StoreSampleContext>(options =>
                              options.UseSqlServer(builder.Configuration.GetConnectionString("StoreSample")));
 
@@ -38,6 +49,8 @@ namespace SalesDatePrediction
                 app.UseSwaggerUI();
             }
 
+
+            app.UseCors("AllowAngular");
             app.UseHttpsRedirection();
 
             app.UseAuthorization();

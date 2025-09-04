@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Entities.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Services.DTO;
 using Services.Interfaces;
+using Services.Services;
 
 namespace SalesDatePrediction.Controllers
 {
@@ -8,23 +11,23 @@ namespace SalesDatePrediction.Controllers
     [ApiController]
     public class OrderController : ControllerBase
     {
-        private readonly IOrderService _clientService;
+        private readonly IOrderService _orderService;
         private readonly ILogger<OrderController> _logger;
 
-        public OrderController(IOrderService clientService, ILogger<OrderController> logger)
+        public OrderController(IOrderService orderService, ILogger<OrderController> logger)
         {
-            _clientService = clientService;
+            _orderService = orderService;
             _logger = logger;          
     }
 
         [HttpGet("next-orders")]
-        public async Task<IActionResult> GetNextPredictedOrders()
+        public async Task<IActionResult> GetNextPredictedOrders([FromQuery] string? companyName)
         {
             try
             {
-                var result = await _clientService.GetNextPredictedOrdersAsync();
+                var result = await _orderService.GetNextPredictedOrdersAsync(companyName);
 
-                if (result == null || !result.Any())
+                if (result.Data == null || !result.Data.Any())
                     return NotFound("No se encontraron predicciones de órdenes.");
 
                 return Ok(result);
@@ -46,9 +49,9 @@ namespace SalesDatePrediction.Controllers
         {
             try
             {
-                var result = await _clientService.GetClientOrdersAsync(customerId);
+                GenericResponse<List<ClientOrder>> result = await _orderService.GetClientOrdersAsync(customerId);
 
-                if (result == null || !result.Any())
+                if (result.Data == null || !result.Data.Any())
                     return NotFound($"No se encontraron órdenes para el cliente {customerId}.");
 
                 return Ok(result);
@@ -61,6 +64,26 @@ namespace SalesDatePrediction.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error inesperado en GetClientOrders");
+                return StatusCode(500, new { message = "Ocurrió un error interno. Inténtelo más tarde." });
+            }
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<GenericResponse<int>>> CreateOrder([FromBody] CreateOrderRequestDto request)
+        {
+            try
+            {
+                GenericResponse<int>  reponse = await _orderService.CreateOrderAsync(request);
+                return Ok(reponse);
+            }
+            catch (ApplicationException ex)
+            {
+                _logger.LogWarning(ex, "Error de negocio en CreateOrderAsync");
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado en CreateOrderAsync");
                 return StatusCode(500, new { message = "Ocurrió un error interno. Inténtelo más tarde." });
             }
         }

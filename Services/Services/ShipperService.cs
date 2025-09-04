@@ -1,6 +1,8 @@
 ﻿using Entities.Models;
 using Microsoft.Extensions.Logging;
+using Services.DTO;
 using Services.Interfaces;
+using System.Net;
 
 namespace Services.Services
 {
@@ -16,11 +18,17 @@ namespace Services.Services
             _logger = logger;
         }
 
-        public async Task<List<AllShippers>> GetAllShippersAsync()
+        public async Task<GenericResponse<List<AllShippers>>> GetAllShippersAsync()
         {
             try
             {
-                return await _executor.ExecuteAsync<AllShippers>("EXEC Sales.GetShippers");
+                GenericResponse<List<AllShippers>> response = new()
+                {
+                    Data = await _executor.ExecuteAsync<AllShippers>("EXEC Sales.GetShippers"),
+                    StatusCode = HttpStatusCode.OK
+                };
+
+                return response;
             }
             catch (Exception ex)
             {

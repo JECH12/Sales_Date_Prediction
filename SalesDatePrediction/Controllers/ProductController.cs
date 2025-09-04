@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Entities.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Services.DTO;
 using Services.Interfaces;
 using Services.Services;
 
@@ -23,9 +25,9 @@ namespace SalesDatePrediction.Controllers
         {
             try
             {
-                var result = await _productService.GetAllProductsAsync();
+                GenericResponse<List<AllProducts>> result = await _productService.GetAllProductsAsync();
 
-                if (result == null || !result.Any())
+                if (result.Data == null || !result.Data.Any())
                     return NotFound("No se encontraron los productos.");
 
                 return Ok(result);

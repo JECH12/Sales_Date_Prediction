@@ -24,7 +24,7 @@ namespace SalesDatePrediction.Controllers
             {
                 var result = await _shipperService.GetAllShippersAsync();
 
-                if (result == null || !result.Any())
+                if (result.Data == null || !result.Data.Any())
                     return NotFound("No se encontraron los transportistas.");
 
                 return Ok(result);

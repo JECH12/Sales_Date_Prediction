@@ -1,12 +1,9 @@
 ﻿using Entities.Context;
 using Entities.Models;
 using Microsoft.Extensions.Logging;
+using Services.DTO;
 using Services.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Net;
 
 namespace Services.Services
 {
@@ -22,11 +19,17 @@ namespace Services.Services
             _logger = logger;
         }
 
-        public async Task<List<AllEmployees>> GetAllEmployeesAsync()
+        public async Task<GenericResponse<List<AllEmployees>>> GetAllEmployeesAsync()
         {
             try
             {
-                return await _executor.ExecuteAsync<AllEmployees>("EXEC HR.GetEmployees");
+                GenericResponse<List<AllEmployees>> response = new() 
+                { 
+                    Data = await _executor.ExecuteAsync<AllEmployees>("EXEC HR.GetEmployees"),
+                    StatusCode = HttpStatusCode.OK,
+                };
+
+                return response;
             }
             catch (Exception ex)
             {

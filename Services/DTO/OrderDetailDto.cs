@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Entities.Models
+namespace Services.DTO
 {
-    public class AllProducts
+    public class OrderDetailDto
     {
         public int ProductId { get; set; }
-        public string ProductName { get; set; } = string.Empty;
-        public decimal UnitPrice { get; set; }
+        public short Qty { get; set; }
+        public float Discount { get; set; }
     }
 }

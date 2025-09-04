@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Entities.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Services.DTO;
 using Services.Interfaces;
 
 namespace SalesDatePrediction.Controllers
@@ -22,9 +24,9 @@ namespace SalesDatePrediction.Controllers
         {
             try
             {
-                var result = await _employeeService.GetAllEmployeesAsync();
+                GenericResponse<List<AllEmployees>> result = await _employeeService.GetAllEmployeesAsync();
 
-                if (result == null || !result.Any())
+                if (result.Data == null || !result.Data.Any())
                     return NotFound("No se encontraron los empleados.");
 
                 return Ok(result);

@@ -1,4 +1,5 @@
 ﻿using Entities.Models;
+using Services.DTO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,6 @@ namespace Services.Interfaces
 {
     public interface IShipperService
     {
-        Task<List<AllShippers>> GetAllShippersAsync();
+        Task<GenericResponse<List<AllShippers>>> GetAllShippersAsync();
     }
 }

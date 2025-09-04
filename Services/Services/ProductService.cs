@@ -1,12 +1,8 @@
 ﻿using Entities.Models;
 using Microsoft.Extensions.Logging;
+using Services.DTO;
 using Services.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+using System.Net;
 namespace Services.Services
 {
     public class ProductService : IProductService
@@ -21,11 +17,16 @@ namespace Services.Services
             _logger = logger;
         }
 
-        public async Task<List<AllProducts>> GetAllProductsAsync()
+        public async Task<GenericResponse<List<AllProducts>>> GetAllProductsAsync()
         {
             try
             {
-                return await _executor.ExecuteAsync<AllProducts>("EXEC Production.GetProducts");
+                GenericResponse<List<AllProducts>> response = new()
+                {
+                    Data = await _executor.ExecuteAsync<AllProducts>("EXEC Production.GetProducts"),
+                    StatusCode = HttpStatusCode.OK
+                };
+                return response;
             }
             catch (Exception ex)
             {

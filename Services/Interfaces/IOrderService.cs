@@ -1,4 +1,5 @@
 ﻿using Entities.Models;
+using Services.DTO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +10,8 @@ namespace Services.Interfaces
 {
     public interface IOrderService
     {
-        Task<List<NextPreditedOrder>> GetNextPredictedOrdersAsync();
-        Task<List<ClientOrder>> GetClientOrdersAsync(int customerId);
+        Task<GenericResponse<List<NextPreditedOrder>>> GetNextPredictedOrdersAsync(string? companyName);
+        Task<GenericResponse<List<ClientOrder>>> GetClientOrdersAsync(int customerId);
+        Task<GenericResponse<int>> CreateOrderAsync(CreateOrderRequestDto request);
     }
 }

@@ -46,6 +46,8 @@ public partial class StoreSampleContext : DbContext
     public DbSet<AllShippers> AllShippers { get; set; }
     public DbSet<AllProducts> AllProducts { get; set; }
 
+    public DbSet<CreateOrderResult> CreateOrderResults { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer("Name=ConnectionStrings:StoreSample");
 
@@ -56,6 +58,7 @@ public partial class StoreSampleContext : DbContext
         modelBuilder.Entity<AllEmployees>().HasNoKey().ToView(null);
         modelBuilder.Entity<AllShippers>().HasNoKey().ToView(null);
         modelBuilder.Entity<AllProducts>().HasNoKey().ToView(null);
+        modelBuilder.Entity<CreateOrderResult>().HasNoKey().ToView(null);
 
         modelBuilder.Entity<CustOrder>(entity =>
         {

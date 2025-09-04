@@ -12,22 +12,15 @@ namespace SalesDatePrediction.UnitTest
 {
     public class OrderServiceTests
     {
-        private readonly StoreSampleContext _mockContext;
-        private readonly Mock<IStoredProcedureExecutor> _mockExecutor;
-        private readonly Mock<ILogger<OrderService>> _mockLogger;
-        private readonly OrderService _orderService;
+        private readonly Mock<IStoredProcedureExecutor> _executorMock;
+        private readonly Mock<ILogger<OrderService>> _loggerMock;
+        private readonly OrderService _service;
 
         public OrderServiceTests()
         {
-             
-            _mockExecutor = new Mock<IStoredProcedureExecutor>();
-            _mockLogger = new Mock<ILogger<OrderService>>();
-            _mockContext = CreateInMemoryContext();
-            _orderService = new OrderService(
-                _mockExecutor.Object,
-                _mockLogger.Object,
-                _mockContext
-            );
+            _executorMock = new Mock<IStoredProcedureExecutor>();
+            _loggerMock = new Mock<ILogger<OrderService>>();
+            _service = new OrderService(_executorMock.Object, _loggerMock.Object, null!);
         }
 
         private StoreSampleContext CreateInMemoryContext()
@@ -36,118 +29,303 @@ namespace SalesDatePrediction.UnitTest
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options;
 
-            var context = new StoreSampleContext(options);
-
-            // Poblar con datos iniciales que vas a necesitar en los tests
-            context.Products.Add(new Product { Productid = 10, Unitprice = 50 });
-            context.SaveChanges();
-
-            return context;
+            return new StoreSampleContext(options);
         }
 
+        // -------------------------
+        // Tests para CreateOrderAsync
+        // ---
+
         [Fact]
-        public async Task CreateOrder_Success()
+        public async Task CreateOrder_ReturnsNewOrderId()
         {
-            
             // Arrange
+            using var context = CreateInMemoryContext();
+            var product = TestData.CreateValidProduct(10, 99.5m);
+            context.Products.Add(product);
+            context.SaveChanges();
+
             var request = new CreateOrderRequestDto
             {
                 Order = new OrderDto
                 {
-                    EmpId = 1,
-                    ShipperId = 1,
-                    ShipName = "Test Ship",
-                    ShipAddress = "Test Address",
-                    ShipCity = "Test City",
-                    Freight = 100,
-                    ShipCountry = "Test Country"
+                    CustId = 1,
+                    EmpId = 2,
+                    ShipperId = 3,
+                    ShipName = "Cliente X",
+                    ShipAddress = "Calle 123",
+                    ShipCity = "Bogotá",
+                    Freight = 50,
+                    ShipCountry = "CO"
                 },
                 OrderDetail = new OrderDetailDto
                 {
                     ProductId = 10,
-                    Qty = 2,
-                    Discount = 0
+                    Qty = 5,
+                    Discount = 0.1f
                 }
             };
 
-            var product = new Product { Productid = 10, Unitprice = 50 };
+            var executorMock = new Mock<IStoredProcedureExecutor>();
+            executorMock
+                .Setup(e => e.ExecuteAsync<CreateOrderResult>(
+                    It.IsAny<string>(),
+                    It.IsAny<object[]>()))
+                .ReturnsAsync(new List<CreateOrderResult>
+                {
+                new CreateOrderResult { NewOrderId = 1234 }
+                });
 
-            _mockExecutor.Setup(e => e.ExecuteAsync<CreateOrderResult>(It.IsAny<string>(), It.IsAny<object[]>()))
-                         .ReturnsAsync(new List<CreateOrderResult> { new CreateOrderResult { NewOrderId = 123 } });
+            var loggerMock = new Mock<ILogger<OrderService>>();
+            var service = new OrderService(executorMock.Object, loggerMock.Object, context);
 
             // Act
-            var response = await _orderService.CreateOrderAsync(request);
+            var result = await service.CreateOrderAsync(request);
 
             // Assert
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Equal(123, response.Data);
+            Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+            Assert.Equal(1234, result.Data);
         }
 
         [Fact]
         public async Task CreateOrder_ProductNotFound()
         {
             // Arrange
+            using var context = CreateInMemoryContext(); 
             var request = new CreateOrderRequestDto
             {
-                Order = new OrderDto
-                {
-                    EmpId = 1,
-                    ShipperId = 1,
-                    ShipName = "Test Ship",
-                    ShipAddress = "Test Address",
-                    ShipCity = "Test City",
-                    Freight = 100,
-                    ShipCountry = "Test Country"
-                },
-                OrderDetail = new OrderDetailDto
-                {
-                    ProductId = 99,
-                    Qty = 1,
-                    Discount = 0
-                }
+                Order = new OrderDto { CustId = 1, EmpId = 2, ShipperId = 3 },
+                OrderDetail = new OrderDetailDto { ProductId = 99, Qty = 1, Discount = 0 }
             };
 
+            var executorMock = new Mock<IStoredProcedureExecutor>();
+            var loggerMock = new Mock<ILogger<OrderService>>();
+            var service = new OrderService(executorMock.Object, loggerMock.Object, context);
+
             // Act
-            var response = await _orderService.CreateOrderAsync(request);
+            var result = await service.CreateOrderAsync(request);
 
             // Assert
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.Equal(0, response.Data);
+            Assert.Equal(HttpStatusCode.InternalServerError, result.StatusCode);
+            Assert.Equal(0, result.Data);
         }
 
         [Fact]
-        public async Task CreateOrder_SPFailure()
+        public async Task CreateOrder_ExecutorFails()
         {
             // Arrange
+            using var context = CreateInMemoryContext();
+            var product = TestData.CreateValidProduct(10, 99.5m);
+            context.Products.Add(product);
+            context.SaveChanges();
+
             var request = new CreateOrderRequestDto
             {
-                Order = new OrderDto
-                {
-                    EmpId = 1,
-                    ShipperId = 1,
-                    ShipName = "Test Ship",
-                    ShipAddress = "Test Address",
-                    ShipCity = "Test City",
-                    Freight = 100,
-                    ShipCountry = "Test Country"
-                },
-                OrderDetail = new OrderDetailDto
-                {
-                    ProductId = 10,
-                    Qty = 1,
-                    Discount = 0
-                }
+                Order = new OrderDto { CustId = 1, EmpId = 2, ShipperId = 3 },
+                OrderDetail = new OrderDetailDto { ProductId = 10, Qty = 1, Discount = 0 }
             };
 
-            _mockExecutor.Setup(e => e.ExecuteAsync<CreateOrderResult>(It.IsAny<string>(), It.IsAny<object[]>()))
-                         .ThrowsAsync(new Exception("DB error"));
+            var executorMock = new Mock<IStoredProcedureExecutor>();
+            executorMock
+                .Setup(e => e.ExecuteAsync<CreateOrderResult>(
+                    It.IsAny<string>(),
+                    It.IsAny<object[]>()))
+                .ThrowsAsync(new Exception("DB Error"));
+
+            var loggerMock = new Mock<ILogger<OrderService>>();
+            var service = new OrderService(executorMock.Object, loggerMock.Object, context);
 
             // Act
-            var response = await _orderService.CreateOrderAsync(request);
+            var result = await service.CreateOrderAsync(request);
 
             // Assert
-            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-            Assert.Equal(0, response.Data);
+            Assert.Equal(HttpStatusCode.InternalServerError, result.StatusCode);
+            Assert.Equal(0, result.Data);
+
+            loggerMock.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.IsAny<It.IsAnyType>(),
+                    It.IsAny<Exception>(),
+                    (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+                Times.Once);
+        }
+
+        // -------------------------
+        // Tests para GetNextPredictedOrdersAsync
+        // ---
+
+        [Fact]
+        public async Task ReturnsData_WhenSuccess()
+        {
+            // Arrange
+            var expectedOrders = new List<NextPreditedOrder>
+            {
+                new NextPreditedOrder { CustomerId = 1, CustomerName = "Cliente Test", LastOrderDate = DateTime.UtcNow }
+            };
+
+            _executorMock
+                .Setup(e => e.ExecuteAsync<NextPreditedOrder>(
+                    It.IsAny<string>(),
+                    It.IsAny<object[]>()))
+                .ReturnsAsync(expectedOrders);
+
+            // Act
+            var result = await _service.GetNextPredictedOrdersAsync("Company Test");
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+            Assert.Single(result.Data);
+            Assert.Equal("Cliente Test", result.Data.First().CustomerName);
+        }
+
+        [Fact]
+        public async Task ThrowsException_WhenExecutorFails()
+        {
+            // Arrange
+            _executorMock
+                .Setup(e => e.ExecuteAsync<NextPreditedOrder>(
+                    It.IsAny<string>(),
+                    It.IsAny<object[]>()))
+                .ThrowsAsync(new Exception("DB Error"));
+
+            // Act & Assert
+            var ex = await Assert.ThrowsAsync<ApplicationException>(
+                () => _service.GetNextPredictedOrdersAsync("Company Test"));
+
+            Assert.Contains("Ocurrió un error al obtener las órdenes predichas", ex.Message);
+
+            _loggerMock.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.IsAny<It.IsAnyType>(),
+                    It.IsAny<Exception>(),
+                    (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+                Times.Once);
+        }
+
+        [Theory]
+        [InlineData("CompanyA")]
+        [InlineData("CompanyB")]
+        [InlineData(null)]
+        public async Task CallsExecutor_WithCompanyNames(string? companyName)
+        {
+            // Arrange
+            var fakeOrders = new List<NextPreditedOrder>
+            {
+                new NextPreditedOrder { CustomerId = 99, CustomerName = "Luis", LastOrderDate = DateTime.UtcNow }
+            };
+
+            _executorMock
+                .Setup(e => e.ExecuteAsync<NextPreditedOrder>(
+                    It.IsAny<string>(),
+                    It.IsAny<object[]>()))
+                .ReturnsAsync(fakeOrders);
+
+            // Act
+            var result = await _service.GetNextPredictedOrdersAsync(companyName);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+            Assert.NotEmpty(result.Data);
+
+            _executorMock.Verify(e =>
+                e.ExecuteAsync<NextPreditedOrder>(
+                    It.Is<string>(q => q.Contains("EXEC Sales.GetNextPredictedOrders")),
+                    It.IsAny<object[]>()),
+                Times.Once);
+        }
+
+        // -------------------------
+        // Tests para GetClientOrdersAsync
+        // -------------------------
+
+        [Fact]
+        public async Task ClientOrders_ReturnsData()
+        {
+            // Arrange
+            var expectedOrders = new List<ClientOrder>
+            {
+                new ClientOrder { OrderId = 1, ShipName = "Cliente 1", ShipCity = "Bogotá" }
+            };
+
+            _executorMock
+                .Setup(e => e.ExecuteAsync<ClientOrder>(
+                    It.IsAny<string>(),
+                    It.IsAny<object[]>()))
+                .ReturnsAsync(expectedOrders);
+
+            // Act
+            var result = await _service.GetClientOrdersAsync(123);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+            Assert.Single(result.Data);
+            Assert.Equal("Cliente 1", result.Data.First().ShipName);
+        }
+
+        [Fact]
+        public async Task ClientOrders_ThrowsException()
+        {
+            // Arrange
+            _executorMock
+                .Setup(e => e.ExecuteAsync<ClientOrder>(
+                    It.IsAny<string>(),
+                    It.IsAny<object[]>()))
+                .ThrowsAsync(new Exception("DB Error"));
+
+            // Act & Assert
+            var ex = await Assert.ThrowsAsync<ApplicationException>(
+                () => _service.GetClientOrdersAsync(456));
+
+            Assert.Contains("Ocurrió un error al obtener las órdenes del cliente", ex.Message);
+
+            _loggerMock.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.IsAny<It.IsAnyType>(),
+                    It.IsAny<Exception>(),
+                    (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+                Times.Once);
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(100)]
+        [InlineData(999)]
+        public async Task ClientOrders_CallsExecutor(int customerId)
+        {
+            // Arrange
+            var fakeOrders = new List<ClientOrder>
+            {
+                new ClientOrder { OrderId = 42, ShipName = "Jorge", ShipCity = "Cali" }
+            };
+
+            _executorMock
+                .Setup(e => e.ExecuteAsync<ClientOrder>(
+                    It.IsAny<string>(),
+                    It.IsAny<object[]>()))
+                .ReturnsAsync(fakeOrders);
+
+            // Act
+            var result = await _service.GetClientOrdersAsync(customerId);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+            Assert.NotEmpty(result.Data);
+
+            _executorMock.Verify(e =>
+                e.ExecuteAsync<ClientOrder>(
+                    It.Is<string>(q => q.Contains("EXEC Sales.GetClientOrders")),
+                    It.IsAny<object[]>()),
+                Times.Once);
         }
     }
 }

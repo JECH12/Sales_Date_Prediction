@@ -49,7 +49,12 @@ public partial class StoreSampleContext : DbContext
     public DbSet<CreateOrderResult> CreateOrderResults { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseSqlServer("Name=ConnectionStrings:StoreSample");
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseSqlServer("Name=ConnectionStrings:StoreSample");
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

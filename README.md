@@ -4,6 +4,8 @@ Informacion relevante:
 
 La cadena de conexion para la base de datos, es una cadena simple para conexion en base de datos creada localmente, de ser necesario, cambiar la cadena de conexion con el tipo de autorizacion necesaria donde se creo la base de datos (usario, contraseña).
 
+A mismo nivel de este ReadMe se encuentran los scripts con la creacion de cada SP solicitado en la prueba, necesarios para las consultas a base de datos realizadas desde el BackEnd.
+
 Se instalaron paquetes como EntityFrameworkCore, EntityFrameworkCore.Desing, EntityFrameworkCore.SqlServer, EntityFrameworkCore.InMemory y Xunit(para UnitTest).
 
 Se uso database Firts teniendo en cuenta que se tenia la base de datos.
